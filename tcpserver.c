@@ -4,6 +4,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <pthread.h>
+#include <stdarg.h>
+
 #define PORT 8080
 #define LOCALHOST "127.0.0.1"
 #define MAXCLIENT 5
@@ -71,7 +73,7 @@ int main() {
 void *recvmsg(void *arg) {
     int index = *(int *)arg;
     char recvline[1024];
-    char sendline[1128];
+    char sendername[64];
     bindedsocket bsock = clients[index];
     recv(bsock.sock, bsock.name, sizeof(bsock.name), 0);
     while (1) {
@@ -79,17 +81,19 @@ void *recvmsg(void *arg) {
         if (recvbytes < 0) {
             throw("RECEIVING ERROR!\n", 1, bsock.sock);
         }
-        printf("\rMessage from (Name: %s, PORT: %hu, ADDR: %lu): %s",
+        printf("\rReceived message[Name: %s, PORT: %hu, ADDR: %lu]: %s",
             bsock.name,
             bsock.addr.sin_port,
             bsock.addr.sin_addr.s_addr,
             recvline
         );
-        sprintf(sendline, "\rfrom %s: %s", bsock.name, recvline);
-        int len = strlen(sendline) + 1;
+        strcpy(sendername, bsock.name);
+        int namelen = strlen(sendername) + 1;
+        int msglen = strlen(recvline) + 1;
         for (int i = 0; i < top; i++) {
             if (i != index && clients[i].sock != SOCKET_ERROR) {
-                send(clients[i].sock, sendline, len, 0);
+                send(clients[i].sock, sendername, namelen, 0);
+                send(clients[i].sock, recvline, msglen, 0);
             }
         }
     }
